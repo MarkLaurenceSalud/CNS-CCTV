@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='shared.css') }}">
+</head>
+<body>
+  {% include 'nav.html' %}
+  <main>
+    <h1>Dashboard</h1>
+    <p>Empty dashboard for now.</p>
+  <h2>Live Camera</h2>
+
+    <div class="camera-box">
+    <video id="video" autoplay playsinline></video>
+
+    <div class="time-overlay" id="clock"></div>
+</div>
+
+<script>
+  const video = document.getElementById('video');
+
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      video.srcObject = stream;
+    });
+</script>
+
+<script>
+function updateClock() {
+  const now = new Date();
+
+  let timeString = now.toLocaleTimeString(); // real-time clock
+
+  document.getElementById("clock").innerText = timeString;
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+
+  </main>
+</body>
+</html>

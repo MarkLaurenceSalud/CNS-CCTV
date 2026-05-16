@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111111;
+  font-family: 'Inter', sans-serif;
+}
+
+.login-container {
+  background: #242424;
+  border: 1px solid #383838;
+  padding: 3rem 2.5rem;
+  width: 90%;
+  max-width: 420px;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+h2 {
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: #eeeeee;
+  margin-bottom: 2.5rem;
+  letter-spacing: -0.02em;
+}
+
+label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ccc7c7;
+  margin-bottom: 0.4rem;
+  margin-top: 1.4rem;
+}
+
+label:first-of-type {
+  margin-top: 0;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  color: #dddddd;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  border-color: #555555;
+}
+
+button[type="submit"] {
+  width: 100%;
+  margin-top: 2rem;
+  padding: 0.85rem;
+  background: #eeeeee;
+  color: #111111;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button[type="submit"]:hover {
+  background: #cccccc;
+}
+
+.error {
+  margin-top: 1rem;
+  font-size: 0.82rem;
+  color: #e05555;
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid #e05555;
+  background: rgba(224, 85, 85, 0.06);
+}
