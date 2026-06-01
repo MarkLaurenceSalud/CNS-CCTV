@@ -1,13 +1,18 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
-from flask import Flask, render_template, redirect, url_for, session, request
+import cv2
+import time
+import threading
+import numpy as np
+from flask import Flask, render_template, redirect, url_for, session, request, Response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash
 from functools import wraps
 from datetime import datetime
 from pytz import timezone
 from user_agents import parse  # robust UA parsing
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -20,6 +25,95 @@ if not db_url:
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+# ── CCTV Camera Configuration ──────────────────────────────────────────
+CAMERA_RTSP_URL = os.environ.get(
+    "CAMERA_RTSP_URL",
+    "rtsp://admin:123456@192.168.100.85:554/profile1"
+)
+
+class CameraStream:
+    """Thread-safe RTSP camera reader. Continuously grabs the latest frame
+    in a background thread so the main Flask threads never block on I/O."""
+
+    def __init__(self, src):
+        self.src = src
+        self.frame = None
+        self.running = False
+        self.lock = threading.Lock()
+        self.cap = None
+
+    def start(self):
+        self.running = True
+        t = threading.Thread(target=self._reader, daemon=True)
+        t.start()
+        return self
+
+    def _reader(self):
+        # Suppress noisy FFmpeg RTSP errors in console
+        os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
+        os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "-8"
+        while self.running:
+            try:
+                if self.cap is None or not self.cap.isOpened():
+                    self.cap = cv2.VideoCapture(self.src, cv2.CAP_FFMPEG)
+                    # Reduce OpenCV buffer to always get the newest frame
+                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    time.sleep(1)
+                    continue
+                grabbed, frame = self.cap.read()
+                if grabbed:
+                    with self.lock:
+                        self.frame = frame
+                else:
+                    # Connection lost — reset
+                    self.cap.release()
+                    self.cap = None
+                    time.sleep(2)
+            except Exception:
+                time.sleep(2)
+
+    def read(self):
+        with self.lock:
+            return self.frame.copy() if self.frame is not None else None
+
+    def is_alive(self):
+        return self.frame is not None
+
+    def stop(self):
+        self.running = False
+        if self.cap:
+            self.cap.release()
+
+# Create the camera stream reader but do not start it yet (lazy start)
+camera = CameraStream(CAMERA_RTSP_URL)
+
+def _offline_frame():
+    """Return a dark placeholder image when the camera is offline."""
+    img = np.zeros((480, 640, 3), dtype=np.uint8)
+    img[:] = (24, 24, 24)
+    text = "CAMERA OFFLINE"
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    scale, thickness = 1.0, 2
+    (tw, th), _ = cv2.getTextSize(text, font, scale, thickness)
+    cx, cy = (640 - tw) // 2, (480 + th) // 2
+    cv2.putText(img, text, (cx, cy), font, scale, (80, 80, 80), thickness, cv2.LINE_AA)
+    return img
+
+def generate_frames():
+    """Yield MJPEG frames for the /video_feed route."""
+    if not camera.running:
+        camera.start()
+    while True:
+        frame = camera.read()
+        if frame is None:
+            frame = _offline_frame()
+        ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        if not ret:
+            continue
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+        time.sleep(0.05)  # ~20 fps cap
 
 # Models
 class Admin(db.Model):
@@ -121,6 +215,21 @@ def dashboard():
     session['state'] = 'dashboard'
     return render_template('dashboard.html')
 
+@app.route('/video_feed')
+@login_required
+def video_feed():
+    """MJPEG stream endpoint — browser loads this as an <img> src."""
+    return Response(generate_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/camera_status')
+@login_required
+def camera_status():
+    """JSON endpoint for the frontend to poll camera health."""
+    if not camera.running:
+        camera.start()
+    return jsonify({"online": camera.is_alive()})
+
 @app.route('/activity')
 @login_required
 @enforce_state
@@ -155,4 +264,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
