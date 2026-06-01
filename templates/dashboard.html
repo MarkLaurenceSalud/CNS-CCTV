@@ -11,8 +11,8 @@
   <main>
     <h1>Dashboard</h1>
 
-    <!-- Camera feed -->
-    <video id="camera" autoplay playsinline width="640" height="480"></video>
+    <!-- Camera feed (from backend RTSP stream) -->
+    <img id="camera" src="{{ url_for('video_feed') }}" width="640" height="480" alt="CCTV Feed" />
 
     <!-- REC indicator -->
     <div class="record-btn">
@@ -37,15 +37,7 @@
     setInterval(updateDateTime, 1000);
     updateDateTime();
 
-    // Access device camera
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-      .then(stream => {
-        document.getElementById('camera').srcObject = stream;
-      })
-      .catch(err => {
-        console.error("Camera access denied:", err);
-        alert("Unable to access camera. Please allow camera permissions.");
-      });
+    // (Removed browser webcam access to use CCTV feed)
   </script>
 </body>
 </html>
