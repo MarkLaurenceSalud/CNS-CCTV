@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='Logo.png') }}" type="image/png">
+</head>
+<body>
+  <div class="login-container">
+    <h2>Welcome back, Jazzy!</h2>
+    <form method="POST">
+      <label>username:</label>
+      <input type="text" name="username" required>
+      <label>password:</label>
+      <input type="password" name="password" required>
+      <button type="submit">Login</button>
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+    </form>
+  </div>
+</body>
+</html>

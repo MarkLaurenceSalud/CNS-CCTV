@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Activity Log</title>
+  <link rel="icon" href="{{ url_for('static', filename='Logo.png') }}" type="image/png">
+  <link rel="stylesheet" href="{{ url_for('static', filename='shared.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activity.css') }}">
+</head>
+<body>
+  {% include 'nav.html' %}
+  <main>
+    <h1>Activity Log</h1>
+    {% if logs %}
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Action</th>
+              <th>Timestamp</th>
+              <th>IP Address</th>
+              <th>Browser</th>
+              <th>Device Info</th>
+              <th>User-Agent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td>{{ log.username }}</td>
+              <td>{{ log.action }}</td>
+              <td>{{ log.timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+              <td>{{ log.ip_address }}</td>
+              <td>{{ log.browser }}</td>
+              <td>{{ log.device_info }}</td>
+              <td>{{ log.user_agent_raw }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No activity yet.</p>
+    {% endif %}
+  </main>
+</body>
+</html>

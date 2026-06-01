@@ -1,0 +1,121 @@
+/* activity.css — Activity Log page styles */
+
+/* ── Table wrapper ── */
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 2rem;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+}
+
+/* ── Table ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+/* ── Header row ── */
+thead tr {
+  background: #1c1c1c;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+th {
+  text-align: left;
+  padding: 0.85rem 1.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #555555;
+  white-space: nowrap;
+}
+
+/* ── Body rows ── */
+tbody tr {
+  border-bottom: 1px solid #1e1e1e;
+  transition: background 0.18s;
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: #1a1a1a;
+}
+
+td {
+  padding: 0.8rem 1.25rem;
+  color: #cccccc;
+  vertical-align: middle;
+  line-height: 1.45;
+}
+
+/* ── Username ── */
+td:nth-child(1) {
+  font-weight: 500;
+  color: #eeeeee;
+  white-space: nowrap;
+}
+
+/* ── Action ── */
+td:nth-child(2) {
+  color: #aaaaaa;
+}
+
+/* ── Timestamp ── */
+td:nth-child(3) {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: #777777;
+  letter-spacing: 0.02em;
+}
+
+/* ── IP Address ── */
+td:nth-child(4) {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: #666666;
+}
+
+/* ── Browser ── */
+td:nth-child(5) {
+  color: #888888;
+  white-space: nowrap;
+}
+
+/* ── Device Info ── */
+td:nth-child(6) {
+  color: #777777;
+  white-space: nowrap;
+}
+
+/* ── User-Agent (long string) ── */
+td:nth-child(7) {
+  font-size: 0.75rem;
+  color: #444444;
+  word-break: break-all;
+  max-width: 260px;
+}
+
+/* ── Zebra striping ── */
+tbody tr:nth-child(even) {
+  background: #131313;
+}
+
+tbody tr:nth-child(even):hover {
+  background: #1a1a1a;
+}
+
+/* ── Empty state ── */
+main > p {
+  margin-top: 2rem;
+  text-align: center;
+  color: #444444;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}

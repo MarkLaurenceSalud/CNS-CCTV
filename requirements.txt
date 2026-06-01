@@ -1,0 +1,8 @@
+flask
+flask_sqlalchemy
+psycopg2-binary
+opencv-python-headless
+werkzeug
+pytz
+user-agents
+python-dotenv
