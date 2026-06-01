@@ -11,6 +11,9 @@ from datetime import datetime
 from pytz import timezone
 from user_agents import parse  # robust UA parsing
 from dotenv import load_dotenv
+import socket
+import ipaddress
+import urllib.parse
 
 load_dotenv()
 
@@ -27,10 +30,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ── CCTV Camera Configuration ──────────────────────────────────────────
-CAMERA_RTSP_URL = os.environ.get(
-    "CAMERA_RTSP_URL",
-    "rtsp://admin:123456@192.168.100.85:554/profile1"
-)
+CAMERA_RTSP_URL = os.environ.get("CAMERA_RTSP_URL")
+if not CAMERA_RTSP_URL:
+    raise RuntimeError("CAMERA_RTSP_URL is not set!")
 
 class CameraStream:
     """Thread-safe RTSP camera reader. Continuously grabs the latest frame
@@ -230,6 +232,90 @@ def camera_status():
         camera.start()
     return jsonify({"online": camera.is_alive()})
 
+
+# --- Diagnostic endpoint (requires DIAG_TOKEN env var) -----------------
+def _try_open_rtsp(url, timeout=5.0):
+    """Try to open the RTSP stream briefly and return (ok, error_message)."""
+    start = time.time()
+    cap = None
+    try:
+        cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+        # wait up to `timeout` seconds for a valid frame
+        while time.time() - start < timeout:
+            if cap is None:
+                break
+            if not cap.isOpened():
+                time.sleep(0.5)
+                continue
+            grabbed, frame = cap.read()
+            if grabbed and frame is not None:
+                return True, "OK"
+            time.sleep(0.3)
+        return False, "timeout or no frames received"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        try:
+            if cap:
+                cap.release()
+        except Exception:
+            pass
+
+
+@app.route('/_diag')
+def diag():
+    """Return diagnostic info about CAMERA_RTSP_URL and quick RTSP check.
+    Access is restricted by matching `DIAG_TOKEN` query param to the
+    `DIAG_TOKEN` environment variable (set this on Railway).
+    """
+    required_token = os.environ.get('DIAG_TOKEN')
+    qtoken = request.args.get('token')
+    if required_token and qtoken != required_token:
+        return jsonify({'error': 'unauthorized'}), 403
+
+    cam_url = os.environ.get('CAMERA_RTSP_URL')
+    if not cam_url:
+        return jsonify({'error': 'CAMERA_RTSP_URL not set'}), 400
+
+    parsed = urllib.parse.urlparse(cam_url)
+    host = parsed.hostname or ''
+    port = parsed.port
+
+    resolved = []
+    host_private = None
+    try:
+        infos = socket.getaddrinfo(host, port or 0, family=socket.AF_UNSPEC)
+        for info in infos:
+            addr = info[4][0]
+            resolved.append(addr)
+        # check privacy against the first resolved address
+        if resolved:
+            try:
+                host_private = ipaddress.ip_address(resolved[0]).is_private
+            except Exception:
+                host_private = None
+    except Exception as e:
+        resolved = ['dns_error: ' + str(e)]
+
+    rtsp_ok, rtsp_msg = _try_open_rtsp(cam_url, timeout=6.0)
+
+    # mask credentials for display
+    display_url = cam_url
+    if parsed.username or parsed.password:
+        display_url = cam_url.replace(parsed.username, '***') if parsed.username else cam_url
+        if parsed.password:
+            display_url = display_url.replace(parsed.password, '***')
+
+    return jsonify({
+        'camera_url': display_url,
+        'host': host,
+        'port': port,
+        'resolved_ips': resolved,
+        'host_private': host_private,
+        'rtsp_accessible': rtsp_ok,
+        'rtsp_message': rtsp_msg,
+    })
+
 @app.route('/activity')
 @login_required
 @enforce_state
@@ -237,6 +323,10 @@ def activity():
     session['state'] = 'activity'
     logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).all()
     return render_template('activity.html', logs=logs)
+
+with app.app_context():
+    db.create_all()
+    camera.start()  # warm start RTSP
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
